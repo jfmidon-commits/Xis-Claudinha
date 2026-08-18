@@ -409,7 +409,7 @@ function CheckoutScreen({ navigation }) {
           <View style={{ borderTopWidth: 1, borderColor: '#333', marginTop: 10, paddingTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
             <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: 'bold' }}>Total</Text>
             <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: 'bold' }}>{formatCurrency(total)}</Text>
-n          </View>
+          </View>
         </View>
       </ScrollView>
 
