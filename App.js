@@ -1,56 +1,10 @@
-import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity, StatusBar,
-  ActivityIndicator, Alert, Linking, TextInput, Modal, Platform
+  ActivityIndicator, Alert, Linking, TextInput, Modal
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createClient } from '@supabase/supabase-js';
-import MapView, { Marker } from 'react-native-maps';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-
-// ==================== CONFIGURAÇÃO DO SUPABASE ====================
-const supabaseUrl = 'https://ovvagkmfotubgpcspjns.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92dmFna21mb3R1YmdwY3Nwam5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDAwMTEsImV4cCI6MjEwMTA3NjAxMX0.GmmFIKggh7kSguDY-OKPEG8qLmQShQp3sbl11ImdTzQ';
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// ==================== NOTIFICAÇÕES ====================
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
-
-async function registerForPushNotificationsAsync() {
-  let token;
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('orders', {
-      name: 'Pedidos Xis da Claudinha',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FFD700',
-    });
-  }
-  if (Device.isDevice) {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus === 'granted') {
-      try {
-        token = (await Notifications.getExpoPushTokenAsync()).data;
-      } catch (e) {
-        console.log('Push token error:', e);
-      }
-    }
-  }
-  return token;
-}
 
 // ==================== CONTEXTOS ====================
 const CartContext = createContext(null);
@@ -75,64 +29,52 @@ function checkOpenStatus() {
   return false;
 }
 
-const STATUS_LABELS = {
-  pendente: { label: '⏳ Pendente', color: '#FFA000' },
-  confirmado: { label: '✅ Confirmado', color: '#4CAF50' },
-  preparando: { label: '👨‍🍳 Preparando', color: '#FF6F00' },
-  saiu_entrega: { label: '🛵 Saiu para entrega', color: '#2196F3' },
-  entregue: { label: '🎉 Entregue!', color: '#4CAF50' },
-  cancelado: { label: '❌ Cancelado', color: '#F44336' },
-  RECEIVED: { label: '⏳ Recebido', color: '#FFA000' },
-  PENDING: { label: '⏳ Pendente', color: '#FFA000' },
-  CONFIRMED: { label: '✅ Confirmado', color: '#4CAF50' },
-  PREPARING: { label: '👨‍🍳 Preparando', color: '#FF6F00' },
-  OUT_FOR_DELIVERY: { label: '🛵 Saiu para entrega', color: '#2196F3' },
-  DELIVERED: { label: '🎉 Entregue!', color: '#4CAF50' },
-  CANCELLED: { label: '❌ Cancelado', color: '#F44336' },
-};
+// ==================== CARDAPIO COMPLETO ====================
+const MENU_FALLBACK = [
+  // XISS
+  { id: 1, name: 'Carne de Panela', description: 'Bife, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 45.50, category: 'Xiss', is_available: true },
+  { id: 2, name: 'De Carne', description: 'Bife, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 27.00, category: 'Xiss', is_available: true },
+  { id: 3, name: 'Coração', description: 'Coração, maionese, ervilha, tomate, alface, ovo, queijo', price: 37.50, category: 'Xiss', is_available: true },
+  { id: 4, name: 'Coração c/ Bacon', description: 'Coração, bacon, maionese, ervilha, tomate, alface, ovo, queijo', price: 39.90, category: 'Xiss', is_available: true },
+  { id: 5, name: 'Bagunça', description: 'Coração, frango, bacon, calabresa, maionese, milho, ervilha, tomate, alface, ovo e queijo', price: 45.50, category: 'Xiss', is_available: true },
+  { id: 6, name: 'Frango', description: 'Frango, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 28.50, category: 'Xiss', is_available: true },
+  { id: 7, name: 'Frango c/ Bacon', description: 'Frango, bacon, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 39.90, category: 'Xiss', is_available: true },
+  { id: 8, name: 'Bacon', description: 'Bacon, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 38.00, category: 'Xiss', is_available: true },
+  { id: 9, name: 'Calabresa', description: 'Calabresa, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 29.50, category: 'Xiss', is_available: true },
+  { id: 10, name: 'Acebolado', description: 'Bife, cebola, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 30.50, category: 'Xiss', is_available: true },
+  { id: 11, name: 'Moda da Casa', description: '2 Bifes, alface, milho, ervilha, tomate, maionese temperada no alho, acebolado e queijo', price: 38.50, category: 'Xiss', is_available: true },
+  { id: 12, name: 'Strogonoff', description: 'Strogonoff de carne, maionese, milho, ervilha, tomate, alface, ovo, queijo', price: 40.00, category: 'Xiss', is_available: true },
+  // DOG E PRENSADO
+  { id: 20, name: 'Prensado', description: 'Maionese, presunto, queijo, ovo e bife', price: 22.00, category: 'Dog e Prensado', is_available: true },
+  { id: 21, name: 'Cachorro Simples', description: 'Salsicha, maionese, milho, ervilha, tomate', price: 18.00, category: 'Dog e Prensado', is_available: true },
+  { id: 22, name: 'Cachorro Especial', description: '2 salsichas, maionese, milho, ervilha, tomate', price: 22.00, category: 'Dog e Prensado', is_available: true },
+  { id: 23, name: 'Cachorro Calabresa', description: 'Calabresa, maionese, milho, ervilha, tomate', price: 20.00, category: 'Dog e Prensado', is_available: true },
+  // BEBIDAS
+  { id: 30, name: 'Refri Lata', description: 'Coca-Cola, Guaraná, Fanta ou Sprite', price: 6.00, category: 'Bebidas', is_available: true },
+  { id: 31, name: 'Refri 600ml', description: 'Coca-Cola, Guaraná, Fanta ou Sprite', price: 9.00, category: 'Bebidas', is_available: true },
+  { id: 32, name: 'Refri 2L', description: 'Coca-Cola, Guaraná, Fanta ou Sprite', price: 14.00, category: 'Bebidas', is_available: true },
+  { id: 33, name: 'Água', description: 'Água mineral sem gás', price: 4.00, category: 'Bebidas', is_available: true },
+];
+
+function groupByCategory(items) {
+  return items.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {});
+}
 
 // ==================== TELA INICIAL ====================
 function HomeScreen({ navigation }) {
   const [menuData, setMenuData] = useState({});
   const [loading, setLoading] = useState(true);
-  const { cart, itemCount } = useContext(CartContext);
+  const { itemCount } = useContext(CartContext);
   const isOpen = checkOpenStatus();
 
   useEffect(() => {
-    async function fetchMenu() {
-      try {
-        const { data, error } = await supabase.from('products').select('*').eq('is_available', true);
-        if (error) {
-          console.log('Erro ao buscar produtos:', error);
-          const fallbackData = [
-            { id: 1, name: 'Xis Salada', description: 'Hambúrguer, queijo, alface, tomate e maionese', price: 28.00, category: 'Xiss', is_available: true },
-            { id: 2, name: 'Xis Bacon', description: 'Hambúrguer, queijo, bacon crocante e maionese', price: 32.00, category: 'Xiss', is_available: true },
-            { id: 3, name: 'Xis Egg', description: 'Hambúrguer, queijo, ovo e maionese', price: 30.00, category: 'Xiss', is_available: true },
-            { id: 4, name: 'Xis Completo', description: 'Hambúrguer, queijo, bacon, ovo, alface, tomate', price: 38.00, category: 'Xiss', is_available: true },
-            { id: 5, name: 'Xis Tudo', description: 'Hambúrguer duplo, queijo, bacon, ovo, calabresa, alface, tomate', price: 45.00, category: 'Xiss', is_available: true },
-            { id: 6, name: 'Dog Simples', description: 'Salsicha, molho e batata palha', price: 15.00, category: 'Cachorro-Quente', is_available: true },
-            { id: 7, name: 'Dog Completo', description: 'Salsicha, queijo, bacon, molho e batata palha', price: 22.00, category: 'Cachorro-Quente', is_available: true },
-          ];
-          const grouped = fallbackData.reduce((acc, item) => {
-            if (!acc[item.category]) acc[item.category] = [];
-            acc[item.category].push(item);
-            return acc;
-          }, {});
-          setMenuData(grouped);
-        } else if (data) {
-          const grouped = data.reduce((acc, item) => {
-            if (!acc[item.category]) acc[item.category] = [];
-            acc[item.category].push(item);
-            return acc;
-          }, {});
-          setMenuData(grouped);
-        }
-      } catch (e) {
-        console.log('Erro fetchMenu:', e);
-      }
-      setLoading(false);
-    }
-    fetchMenu();
+    const grouped = groupByCategory(MENU_FALLBACK);
+    setMenuData(grouped);
+    setLoading(false);
   }, []);
 
   if (loading) {
@@ -148,20 +90,15 @@ function HomeScreen({ navigation }) {
     <View style={styles.homeContainer}>
       <StatusBar barStyle="light-content" />
       <View style={styles.header}>
-        <Text style={styles.logoText}>Xis DA CLAUDINHA</Text>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Orders')}>
-            <Text style={styles.headerIconText}>📋</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cartIcon} onPress={() => navigation.navigate('Cart')}>
-            <Text style={styles.cartIconText}>🛒 {itemCount}</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.logoText}>Xiss DA CLAUDINHA</Text>
+        <TouchableOpacity style={styles.cartIcon} onPress={() => navigation.navigate('Cart')}>
+          <Text style={styles.cartIconText}>🛒 {itemCount}</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>🔥 O Xis Raiz do Jeitinho que a Gente Gosta!</Text>
+          <Text style={styles.bannerTitle}>🔥 O Sabor que te Prende!</Text>
           <Text style={styles.bannerSub}>
             {isOpen ? '🟢 Aberto agora! Peça já!' : '🔴 Fechado no momento. Volte a partir das 19h!'}
           </Text>
@@ -169,7 +106,9 @@ function HomeScreen({ navigation }) {
 
         {Object.keys(menuData).map(category => (
           <View key={category}>
-            <Text style={styles.categoryTitle}>{category === 'Xiss' ? '🍔' : '🌭'} {category}</Text>
+            <Text style={styles.categoryTitle}>
+              {category === 'Xiss' ? '🍔' : category === 'Dog e Prensado' ? '🌭' : '🥤'} {category}
+            </Text>
             {menuData[category].map(item => (
               <TouchableOpacity key={item.id} style={styles.productCard} onPress={() => navigation.navigate('Detail', { product: item })}>
                 <View style={styles.productInfo}>
@@ -181,10 +120,25 @@ function HomeScreen({ navigation }) {
             ))}
           </View>
         ))}
+
+        {/* Instagram e Feedback */}
+        <View style={{ margin: 20, marginTop: 30 }}>
+          <TouchableOpacity style={styles.instagramButton} onPress={() => Linking.openURL('https://www.instagram.com/oxissdaclaudinha')}>
+            <Text style={styles.instagramText}>📸 Siga @oxissdaclaudinha</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.feedbackButton} onPress={() => Linking.openURL('https://wa.me/5551989111389?text=Oi Claudinha! Acabei de comer meu Xiss e queria contar como foi! 😋')}>
+            <Text style={styles.feedbackText}>💬 Conta pra gente como foi seu Xiss!</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* by Midon discreto */}
+        <View style={{ alignItems: 'center', marginBottom: 30, marginTop: 10 }}>
+          <Text style={{ color: '#444', fontSize: 11 }}>by Midon</Text>
+        </View>
       </ScrollView>
 
       <TouchableOpacity style={styles.whatsappButton} onPress={() => Linking.openURL('https://wa.me/5551989111389')}>
-        <Text style={styles.whatsappText}>💬 Falar com Claudinha</Text>
+        <Text style={styles.whatsappText}>💬 Falar com a Claudinha</Text>
       </TouchableOpacity>
     </View>
   );
@@ -199,11 +153,10 @@ function DetailScreen({ route, navigation }) {
   const [quantity, setQuantity] = useState(1);
 
   const extrasList = [
-    { id: 1, name: '🧀 Queijo Cheddar', price: 4.00 },
-    { id: 2, name: '🥓 Bacon Extra', price: 5.00 },
-    { id: 3, name: '🧅 Cebola Caramelizada', price: 2.00 },
-    { id: 4, name: '🥩 Bife Extra', price: 7.00 },
-    { id: 5, name: '🥚 Ovo', price: 2.50 },
+    { id: 1, name: '🧀 Queijo, Ovo e Presunto', price: 3.00 },
+    { id: 2, name: '🧅 Cebola', price: 3.00 },
+    { id: 3, name: '🧀 Cheddar e Catupiry', price: 6.00 },
+    { id: 4, name: '🥩 Bife Extra', price: 8.00 },
   ];
 
   const toggleExtra = (extra) => {
@@ -273,7 +226,7 @@ function DetailScreen({ route, navigation }) {
         <Text style={styles.sectionTitle}>Observações</Text>
         <TextInput
           style={styles.obsInput}
-          placeholder="Ex: Sem maionese, cortar ao meio, ponto da carne..."
+          placeholder="Ex: Sem milho, sem ervilha, sem cebola, sem maionese..."
           placeholderTextColor="#777"
           value={obs}
           onChangeText={setObs}
@@ -296,13 +249,13 @@ function DetailScreen({ route, navigation }) {
 
 // ==================== TELA DO CARRINHO ====================
 function CartScreen({ navigation }) {
-  const { cart, removeFromCart, updateQuantity, clearCart, total, itemCount } = useContext(CartContext);
+  const { cart, removeFromCart, clearCart, total, itemCount } = useContext(CartContext);
 
   if (cart.length === 0) {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.emptyCartText}>Seu carrinho está vazio!</Text>
-        <Text style={styles.emptyCartSub}>Adicione um Xis raiz aí! 🍔</Text>
+        <Text style={styles.emptyCartSub}>Adicione um Xiss raiz aí! 🍔</Text>
         <TouchableOpacity style={styles.backToMenuBtn} onPress={() => navigation.navigate('Home')}>
           <Text style={styles.backToMenuText}>Ver Cardápio</Text>
         </TouchableOpacity>
@@ -346,7 +299,7 @@ function CartScreen({ navigation }) {
   );
 }
 
-// ==================== TELA DE CHECKOUT ====================
+// ==================== TELA DE CHECKOUT (OFFLINE) ====================
 function CheckoutScreen({ navigation }) {
   const { cart, total, clearCart } = useContext(CartContext);
   const { userInfo, setUserInfo } = useContext(UserContext);
@@ -356,125 +309,64 @@ function CheckoutScreen({ navigation }) {
     street: '', number: '', complement: '', neighborhood: '', city: 'Viamão', phone: userInfo.phone || ''
   });
   const [showPixModal, setShowPixModal] = useState(false);
-  const [orderId, setOrderId] = useState(null);
-  const [debugError, setDebugError] = useState('');
 
   const handlePlaceOrder = async () => {
-    setDebugError('');
-
     if (!address.street || !address.number || !address.phone) {
       Alert.alert('Ops!', 'Preencha o endereço completo e telefone');
       return;
     }
 
     setUserInfo({ ...userInfo, address, phone: address.phone });
+
+    if (paymentMethod === 'pix') {
+      setShowPixModal(true);
+    } else {
+      sendOrderViaWhatsApp();
+    }
+  };
+
+  const sendOrderViaWhatsApp = () => {
     setLoading(true);
 
-    try {
-      const orderItems = cart.map(item => ({
-        product_id: item.productId,
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        extras: item.extras.map(e => e.name),
-        observations: item.observations,
-      }));
+    let message = `*🍔 NOVO PEDIDO - Xiss da Claudinha*\n\n`;
+    message += `*Cliente:* ${address.phone}\n`;
+    message += `*Endereço:* ${address.street}, ${address.number}`;
+    if (address.complement) message += ` - ${address.complement}`;
+    message += `\n*Bairro:* ${address.neighborhood}\n`;
+    message += `*Cidade:* ${address.city}\n\n`;
+    message += `*📋 ITENS DO PEDIDO:*\n`;
 
-      const orderData = {
-        items: orderItems,
-        total: total,
-        status: 'pendente',
-        payment_method: paymentMethod,
-        payment_status: 'pendente',
-        address: address,
-        customer_phone: address.phone,
-        delivery_location: null,
-      };
-
-      console.log('=== ENVIANDO PARA SUPABASE ===');
-      console.log('Dados:', JSON.stringify(orderData, null, 2));
-
-      const { data, error } = await supabase
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
-
-      console.log('=== RESPOSTA SUPABASE ===');
-      console.log('Data:', data);
-      console.log('Error:', error);
-
-      if (error) {
-        if (error.message && (error.message.includes('column') || error.message.includes('does not exist'))) {
-          console.log('Tentando estrutura antiga...');
-          const oldOrderData = {
-            user_phone: address.phone,
-            total: total,
-            status: 'RECEIVED',
-            payment_method: paymentMethod.toUpperCase(),
-          };
-
-          const { data: oldData, error: oldError } = await supabase
-            .from('orders')
-            .insert(oldOrderData)
-            .select()
-            .single();
-
-          if (oldError) {
-            console.log('Erro estrutura antiga:', oldError);
-            setDebugError(`ERRO BANCO (antigo): ${oldError.message}\nCódigo: ${oldError.code}`);
-            Alert.alert('Erro no Banco', `Não foi possível salvar.\n\nDetalhe: ${oldError.message}`);
-            setLoading(false);
-            return;
-          }
-
-          console.log('Sucesso com estrutura antiga:', oldData);
-          data = oldData;
-        } else {
-          console.log('Erro estrutura nova:', error);
-          setDebugError(`ERRO BANCO (novo): ${error.message}\nCódigo: ${error.code}`);
-          Alert.alert('Erro no Banco', `Não foi possível salvar.\n\nDetalhe: ${error.message}`);
-          setLoading(false);
-          return;
-        }
-      }
-
-      console.log('Pedido criado com sucesso:', data);
-
-      try {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: 'Pedido Recebido! 🍔',
-            body: `Seu pedido #${data.id.slice(0, 8)} foi enviado!`,
-            data: { screen: 'OrderTracking', orderId: data.id },
-          },
-          trigger: null,
+    cart.forEach((item, idx) => {
+      message += `\n${idx + 1}. *${item.quantity}x ${item.name}* — ${formatCurrency(item.finalPrice)}\n`;
+      if (item.extras.length > 0) {
+        item.extras.forEach(ext => {
+          message += `   ➕ ${ext.name}\n`;
         });
-      } catch (notifErr) {
-        console.log('Erro notificação (não crítico):', notifErr);
       }
+      if (item.observations) {
+        message += `   📝 ${item.observations}\n`;
+      }
+    });
 
-      if (paymentMethod === 'pix') {
-        setOrderId(data.id);
-        setShowPixModal(true);
-      } else {
-        Alert.alert('Pedido Confirmado!', 'Pagamento na entrega selecionado.');
-        clearCart();
-        navigation.replace('OrderTracking', { orderId: data.id });
-      }
-    } catch (err) {
-      console.log('Erro geral:', err);
-      setDebugError(`ERRO GERAL: ${err.message || 'Desconhecido'}`);
-      Alert.alert('Erro', `Não foi possível finalizar o pedido.\n\n${err.message || 'Erro desconhecido'}`);
-    } finally {
-      setLoading(false);
-    }
+    message += `\n*💰 TOTAL: ${formatCurrency(total)}*\n`;
+    message += `*💳 Pagamento:* ${paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'dinheiro' ? 'Dinheiro na entrega' : 'Cartão na entrega'}\n\n`;
+    message += `_via app Xiss da Claudinha_`;
+
+    const encodedMsg = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/5551989111389?text=${encodedMsg}`;
+
+    Linking.openURL(whatsappUrl).catch(() => {
+      Alert.alert('Erro', 'Não foi possível abrir o WhatsApp. Verifique se está instalado.');
+    });
+
+    clearCart();
+    setLoading(false);
+    navigation.replace('Home');
   };
 
   const finishPixOrder = () => {
     setShowPixModal(false);
-    clearCart();
-    navigation.replace('OrderTracking', { orderId });
+    sendOrderViaWhatsApp();
   };
 
   return (
@@ -517,14 +409,8 @@ function CheckoutScreen({ navigation }) {
           <View style={{ borderTopWidth: 1, borderColor: '#333', marginTop: 10, paddingTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
             <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: 'bold' }}>Total</Text>
             <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: 'bold' }}>{formatCurrency(total)}</Text>
-          </View>
+n          </View>
         </View>
-
-        {debugError ? (
-          <View style={{ backgroundColor: '#330000', padding: 12, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#F44336' }}>
-            <Text style={{ color: '#F44336', fontSize: 11 }}>DEBUG: {debugError}</Text>
-          </View>
-        ) : null}
       </ScrollView>
 
       <View style={styles.checkoutFooter}>
@@ -542,242 +428,19 @@ function CheckoutScreen({ navigation }) {
             </Text>
             <View style={{ backgroundColor: '#1E1E1E', padding: 16, borderRadius: 10, marginBottom: 20, width: '100%' }}>
               <Text style={{ color: '#A9A9A9', fontSize: 12 }}>CHAVE PIX (CELULAR)</Text>
-              <Text style={{ color: '#FFD700', fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>51 99111-1389</Text>
+              <Text style={{ color: '#FFD700', fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>(51) 98991-1389</Text>
               <Text style={{ color: '#A9A9A9', fontSize: 12, marginTop: 8 }}>NOME</Text>
               <Text style={{ color: '#FFF', fontSize: 16 }}>Claudinha Lanches</Text>
             </View>
-            <TouchableOpacity style={styles.whatsappLargeBtn} onPress={() => Linking.openURL('https://wa.me/5551989111389?text=Olá! Acabei de fazer um pedido via app e vou enviar o comprovante do Pix!')}>
+            <TouchableOpacity style={styles.whatsappLargeBtn} onPress={() => Linking.openURL('https://wa.me/5551989111389?text=Oi! Acabei de fazer um pedido via app e vou enviar o comprovante do Pix!')}>
               <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>💬 Enviar Comprovante no WhatsApp</Text>
             </TouchableOpacity>
             <TouchableOpacity style={{ marginTop: 12 }} onPress={finishPixOrder}>
-              <Text style={{ color: '#4CAF50', fontSize: 16 }}>Já paguei, acompanhar pedido →</Text>
+              <Text style={{ color: '#4CAF50', fontSize: 16 }}>Já paguei, enviar pedido →</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
-  );
-}
-
-// ==================== TELA DE MEUS PEDIDOS ====================
-function OrdersScreen({ navigation }) {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-
-  useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
-  async function fetchOrders() {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (error) {
-        console.log('Erro buscar pedidos:', error);
-        setErrorMsg(`Erro: ${error.message}`);
-      } else {
-        setOrders(data || []);
-        setErrorMsg('');
-      }
-    } catch (e) {
-      setErrorMsg(`Erro: ${e.message}`);
-    }
-    setLoading(false);
-  }
-
-  if (loading) {
-    return <View style={styles.centerContainer}><ActivityIndicator size="large" color="#FFD700" /></View>;
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <Text style={{ color: '#FFD700', fontSize: 24, fontWeight: 'bold', marginBottom: 20 }}>Meus Pedidos</Text>
-
-        {errorMsg ? (
-          <View style={{ backgroundColor: '#330000', padding: 12, borderRadius: 8, marginBottom: 20 }}>
-            <Text style={{ color: '#F44336' }}>{errorMsg}</Text>
-          </View>
-        ) : null}
-
-        {orders.length === 0 && (
-          <Text style={{ color: '#A9A9A9', textAlign: 'center', marginTop: 40 }}>Nenhum pedido ainda 🍔</Text>
-        )}
-
-        {orders.map(order => {
-          const status = STATUS_LABELS[order.status] || { label: order.status || 'Desconhecido', color: '#999' };
-          const orderTotal = order.total || 0;
-          const itemCount = order.items ? (Array.isArray(order.items) ? order.items.length : 1) : 1;
-
-          return (
-            <TouchableOpacity key={order.id} style={styles.orderCard} onPress={() => navigation.navigate('OrderTracking', { orderId: order.id })}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Pedido #{order.id ? order.id.slice(0, 8) : '???'}</Text>
-                <Text style={{ color: status.color, fontWeight: 'bold' }}>{status.label}</Text>
-              </View>
-              <Text style={{ color: '#A9A9A9', fontSize: 12 }}>
-                {order.created_at ? new Date(order.created_at).toLocaleString('pt-BR') : 'Data desconhecida'}
-              </Text>
-              <Text style={{ color: '#FFD700', marginTop: 6, fontSize: 16, fontWeight: 'bold' }}>
-                {formatCurrency(orderTotal)}
-              </Text>
-              <Text style={{ color: '#A9A9A9', fontSize: 12, marginTop: 4 }}>
-                {itemCount} item(s) • {(order.payment_method || 'PIX').toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-}
-
-// ==================== TELA DE RASTREAMENTO ====================
-function OrderTrackingScreen({ route, navigation }) {
-  const { orderId } = route.params;
-  const [order, setOrder] = useState(null);
-  const [deliveryLocation, setDeliveryLocation] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [mapError, setMapError] = useState(false);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: -30.0819,
-    longitude: -51.2450,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
-
-  useEffect(() => {
-    fetchOrder();
-
-    let subscription = null;
-    try {
-      subscription = supabase
-        .channel(`order-${orderId}`)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${orderId}`,
-        }, payload => {
-          setOrder(payload.new);
-          if (payload.new.delivery_location) {
-            const loc = payload.new.delivery_location;
-            setDeliveryLocation(loc);
-            setMapRegion({
-              latitude: loc.latitude,
-              longitude: loc.longitude,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            });
-          }
-          if (payload.new.status !== payload.old?.status) {
-            const st = STATUS_LABELS[payload.new.status];
-            if (st) {
-              try {
-                Notifications.scheduleNotificationAsync({
-                  content: { title: 'Atualização do Pedido 📦', body: `Seu pedido agora está: ${st.label}` },
-                  trigger: null,
-                });
-              } catch (e) {}
-            }
-          }
-        })
-        .subscribe();
-    } catch (e) {
-      console.log('Erro ao criar subscription:', e);
-    }
-
-    return () => {
-      if (subscription && typeof subscription.unsubscribe === 'function') {
-        try {
-          subscription.unsubscribe();
-        } catch (e) {
-          console.log('Erro ao unsubscribe:', e);
-        }
-      }
-    };
-  }, [orderId]);
-
-  async function fetchOrder() {
-    try {
-      const { data } = await supabase.from('orders').select('*').eq('id', orderId).single();
-      if (data) {
-        setOrder(data);
-        if (data.delivery_location) {
-          setDeliveryLocation(data.delivery_location);
-          setMapRegion({
-            latitude: data.delivery_location.latitude,
-            longitude: data.delivery_location.longitude,
-            latitudeDelta: 0.02,
-            longitudeDelta: 0.02,
-          });
-        }
-      }
-    } catch (e) {
-      console.log('Erro fetchOrder:', e);
-    }
-    setLoading(false);
-  }
-
-  if (loading || !order) {
-    return <View style={styles.centerContainer}><ActivityIndicator size="large" color="#FFD700" /></View>;
-  }
-
-  const status = STATUS_LABELS[order.status] || { label: order.status || 'Desconhecido', color: '#999' };
-
-  return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
-      {!mapError ? (
-        <MapView 
-          style={{ flex: 1 }} 
-          region={mapRegion}
-          onError={(e) => { console.log('Map error:', e); setMapError(true); }}
-        >
-          {deliveryLocation && (
-            <Marker coordinate={deliveryLocation} title="Entregador">
-              <View style={{ backgroundColor: '#FF6B00', padding: 8, borderRadius: 20, borderWidth: 2, borderColor: '#FFF' }}>
-                <Text style={{ fontSize: 18 }}>🛵</Text>
-              </View>
-            </Marker>
-          )}
-          <Marker coordinate={{ latitude: -30.0819, longitude: -51.2450 }} title="Xis da Claudinha">
-            <View style={{ backgroundColor: '#D32F2F', padding: 8, borderRadius: 20, borderWidth: 2, borderColor: '#FFD700' }}>
-              <Text style={{ fontSize: 18 }}>🍔</Text>
-            </View>
-          </Marker>
-        </MapView>
-      ) : (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1E1E1E' }}>
-          <Text style={{ color: '#A9A9A9', fontSize: 16 }}>🗺️ Mapa indisponível</Text>
-          <Text style={{ color: '#666', fontSize: 12, marginTop: 8 }}>O rastreamento continua funcionando</Text>
-        </View>
-      )}
-
-      <View style={styles.trackingCard}>
-        <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: 'bold' }}>Pedido #{order.id ? order.id.slice(0, 8) : '???'}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-          <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-          <Text style={{ color: '#FFF', fontSize: 16, marginLeft: 8, fontWeight: '600' }}>{status.label}</Text>
-        </View>
-        <Text style={{ color: '#A9A9A9', marginTop: 8 }}>
-          Pagamento: {(order.payment_method || 'PIX').toUpperCase()} • {(order.payment_status || 'PENDENTE').toUpperCase()}
-        </Text>
-        <Text style={{ color: '#FFD700', fontSize: 20, fontWeight: 'bold', marginTop: 10 }}>
-          {formatCurrency(order.total)}
-        </Text>
-        {order.status === 'entregue' && (
-          <TouchableOpacity style={styles.rateBtn} onPress={() => Linking.openURL('https://wa.me/5551989111389?text=Oi! Recebi meu pedido, queria deixar um feedback!')}>
-            <Text style={{ color: '#FFF', fontWeight: 'bold' }}>⭐ Avaliar no WhatsApp</Text>
-          </TouchableOpacity>
-        )}
-      </View>
     </View>
   );
 }
@@ -788,8 +451,6 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   const [cart, setCart] = useState([]);
   const [userInfo, setUserInfo] = useState({ phone: '', address: {} });
-  const notificationListener = useRef();
-  const responseListener = useRef();
 
   const itemCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
   const total = cart.reduce((sum, item) => sum + (item.finalPrice || 0), 0);
@@ -806,54 +467,17 @@ export default function App() {
     });
   };
 
-  const updateQuantity = (index, delta) => {
-    setCart(prev => {
-      const newCart = [...prev];
-      const newQty = (newCart[index].quantity || 1) + delta;
-      if (newQty <= 0) {
-        newCart.splice(index, 1);
-      } else {
-        newCart[index] = {
-          ...newCart[index],
-          quantity: newQty,
-          finalPrice: (newCart[index].unitPrice || newCart[index].finalPrice || 0) * newQty,
-        };
-      }
-      return newCart;
-    });
-  };
-
   const clearCart = () => setCart([]);
-
-  useEffect(() => {
-    registerForPushNotificationsAsync();
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notificação recebida:', notification);
-    });
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Resposta notificação:', response);
-    });
-    return () => {
-      try {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-        Notifications.removeNotificationSubscription(responseListener.current);
-      } catch (e) {
-        console.log('Erro ao remover subscription:', e);
-      }
-    };
-  }, []);
 
   return (
     <UserContext.Provider value={{ userInfo, setUserInfo }}>
-      <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, total, itemCount }}>
+      <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, total, itemCount }}>
         <NavigationContainer>
           <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: '#1E1E1E' }, headerTintColor: '#FFD700' }}>
             <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Detail" component={DetailScreen} options={{ title: 'Montar Pedido' }} />
             <Stack.Screen name="Cart" component={CartScreen} options={{ title: '🛒 Meu Carrinho' }} />
             <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Pagamento' }} />
-            <Stack.Screen name="Orders" component={OrdersScreen} options={{ title: '📋 Meus Pedidos' }} />
-            <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} options={{ title: '📍 Rastreamento' }} />
           </Stack.Navigator>
         </NavigationContainer>
       </CartContext.Provider>
@@ -884,6 +508,11 @@ const styles = StyleSheet.create({
   productName: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
   productDesc: { color: '#A9A9A9', fontSize: 12, marginTop: 5 },
   productPrice: { color: '#FFD700', fontSize: 18, fontWeight: 'bold' },
+
+  instagramButton: { backgroundColor: '#E1306C', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginBottom: 10 },
+  instagramText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  feedbackButton: { backgroundColor: '#333', paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#555' },
+  feedbackText: { color: '#FFF', fontSize: 14 },
 
   detailImagePlaceholder: { height: 220, backgroundColor: '#1E1E1E', justifyContent: 'center', alignItems: 'center' },
   detailImageText: { color: '#FFD700', fontSize: 24, fontWeight: 'bold' },
@@ -936,12 +565,6 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { backgroundColor: '#1E1E1E', padding: 24, borderRadius: 16, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   whatsappLargeBtn: { backgroundColor: '#25D366', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, width: '100%', alignItems: 'center' },
-
-  orderCard: { backgroundColor: '#1E1E1E', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#333' },
-
-  trackingCard: { position: 'absolute', bottom: 24, left: 16, right: 16, backgroundColor: '#1E1E1E', padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#333', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10, elevation: 10 },
-  statusDot: { width: 12, height: 12, borderRadius: 6 },
-  rateBtn: { backgroundColor: '#25D366', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 12 },
 
   whatsappButton: { position: 'absolute', bottom: 30, left: 20, backgroundColor: '#25D366', paddingVertical: 15, paddingHorizontal: 25, borderRadius: 30, elevation: 5 },
   whatsappText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
