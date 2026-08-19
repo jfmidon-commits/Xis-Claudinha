@@ -48,7 +48,7 @@ const MENU_FALLBACK = [
   { id: 20, name: 'Prensado', description: 'Maionese, presunto, queijo, ovo e bife', price: 22.00, category: 'Dog e Prensado', is_available: true },
   { id: 21, name: 'Cachorro Simples', description: 'Salsicha, maionese, milho, ervilha, tomate', price: 18.00, category: 'Dog e Prensado', is_available: true },
   { id: 22, name: 'Cachorro Especial', description: '2 salsichas, maionese, milho, ervilha, tomate', price: 22.00, category: 'Dog e Prensado', is_available: true },
-  { id: 23, name: 'Cachorro Calabresa', description: 'Calabresa, maionese, milho, ervilha, tomate', price: 20.00, category: 'Dog e Prensado', is_available: true },
+  { id: 23, name: 'Cachorro Calabresa', description: 'Calabresa, maionese, milho, ervilha, tomate', price: 22.00, category: 'Dog e Prensado', is_available: true },
   // BEBIDAS
   { id: 30, name: 'Refri Lata', description: 'Coca-Cola, Guaraná, Fanta ou Sprite', price: 6.00, category: 'Bebidas', is_available: true },
   { id: 31, name: 'Refri 600ml', description: 'Coca-Cola, Guaraná, Fanta ou Sprite', price: 9.00, category: 'Bebidas', is_available: true },
@@ -100,7 +100,7 @@ function HomeScreen({ navigation }) {
         <View style={styles.banner}>
           <Text style={styles.bannerTitle}>🔥 O Sabor que te Prende!</Text>
           <Text style={styles.bannerSub}>
-            {isOpen ? '🟢 Aberto agora! Peça já!' : '🔴 Fechado no momento. Volte a partir das 19h!'}
+            {isOpen ? '🔥 A chapa tá quente! Peça já o seu Xiss! 🍔' : '🔴 Fechado no momento. Volte a partir das 19h!'}
           </Text>
         </View>
 
