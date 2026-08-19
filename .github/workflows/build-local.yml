@@ -1,4 +1,5 @@
-name: Build Android APK (Local - Sem EAS Cloud)
+
+ name: Build Android APK (Local - Sem EAS Cloud)
 
 on:
   push:
@@ -36,6 +37,9 @@ jobs:
       - name: Prebuild (gerar arquivos nativos)
         run: npx expo prebuild --platform android
 
+      - name: Dar permissão ao gradlew
+        run: chmod +x android/gradlew
+
       - name: Build APK com Gradle
         run: |
           cd android
@@ -46,3 +50,4 @@ jobs:
         with:
           name: xis-da-claudinha-apk
           path: android/app/build/outputs/apk/release/app-release.apk
+ 
